@@ -1,5 +1,6 @@
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 from faker import Faker
+import random
 from random import randrange, shuffle
 import json
 import uuid
@@ -10,7 +11,7 @@ MIN_ENTITIES_PER_DOC = 2
 MAX_ENTITIES_PER_DOC = 20
 MAX_SCORE = 100
 MIN_SCORE = 0
-TEXT_LOCALIZATION = 'ar_AA'  # Saudi Arabian Arabic
+TEXT_LOCALIZATION = 'he_IL'  # Saudi Arabian Arabic
 GEO_LOCALIZATION = 'IL'  # Israel
 
 ENTITY_TYPES = {
@@ -71,15 +72,41 @@ class DocEntitiesGenerator:
         self.entity_types: List[EntityType] = None
         self.docs: List[Document] = None
         self.entities: List[EntityType] = None
+        self._geographic_polygons = self._load_json_file(file_name="buildings_poly_in_haifa", dir_path="../data")
 
     def generate(self):
         self.entity_types: List[EntityType] = self._generate_entity_type_list()
         self.docs: List[Document] = self._generate_docs()
         self.entities: List[EntityType] = self._generate_entities()
 
+    def _load_json_file(self, file_name, dir_path):
+        with open(f'{dir_path}/{file_name}.json') as json_file:
+            data = json.load(json_file)
+        return data
+
     def _get_random_entity_type(self) -> EntityType:
         entity_types_len = len(self.entity_types)
         return self.entity_types[randrange(start=0, stop=entity_types_len)]
+
+    @staticmethod
+    def get_fake_localized_geo_point():
+        random_lat = 31 + random.random() * 2
+        random_lon = 34 + random.random() * 2
+        return (random_lat, random_lon)
+
+    @staticmethod
+    def cast_to_postgis_geography(point_or_polygon):
+        casted_geo: str = None
+        if isinstance(point_or_polygon, tuple):
+            casted_geo = f"POINT({point_or_polygon[1]} {point_or_polygon[0]})" # TODO check lat long order
+        else:
+            list_to_flat = point_or_polygon['geometry']['coordinates'][0]
+            flat_list = [val for sublist in list_to_flat for val in sublist]
+            poly_as_couples = []
+            for idx in range(0, len(flat_list), 2):
+                 poly_as_couples.append(f"{flat_list[idx]} {flat_list[idx + 1]}")
+            casted_geo = f"POLYGON(({','.join(poly_as_couples)}))"  # TODO check lat long order
+        return casted_geo
 
     def _get_entities_from_document(self, document: Document) -> List[EntityType]:
         entities_count = randrange(start=0, stop=MAX_ENTITIES_PER_DOC + 1)
@@ -88,10 +115,13 @@ class DocEntitiesGenerator:
         doc_entities = []
         for idx, word in enumerate(doc_words_shuffled[:entities_count]):
             entity_type: EntityType = self._get_random_entity_type()
-            random_geo: Tuple[str] = fake.local_latlng(country_code=GEO_LOCALIZATION, coords_only=True)
+            random_true_false = random.random() > 0.5
+            random_geo: Union[Tuple[str], Dict] = \
+            DocEntitiesGenerator.get_fake_localized_geo_point() if random_true_false else \
+                self._geographic_polygons[randrange(start=0, stop=len(self._geographic_polygons))]
             textLocation = TextInfo(offset=document.text.index(word), length=len(word), word=word)
             entity = Entity(_id=str(uuid.uuid4()), doc_id=document.id, entity_type=entity_type,
-                            score=randrange(start=0, stop=MAX_SCORE + 1), geolocation=json.dumps(random_geo), textInfo=textLocation)
+                            score=randrange(start=0, stop=MAX_SCORE + 1), geolocation=DocEntitiesGenerator.cast_to_postgis_geography(random_geo), textInfo=textLocation)
             doc_entities.append(entity)
 
         return doc_entities
@@ -115,8 +145,7 @@ class DocEntitiesGenerator:
 
     @staticmethod
     def _generate_docs() -> List[Document]:
-        paragraphs = fake.paragraphs()
-        docs = [Document(_id=f"doc_{idx}", text="/n".join(paragraphs)) for idx in range(DOC_COUNT)]
+        docs = [Document(_id=f"doc_{idx}", text="/n".join(fake.paragraphs())) for idx in range(DOC_COUNT)]
         return docs
 
     def store_to_json_files(self, dir_path="../data"):
