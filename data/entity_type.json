@@ -1,0 +1,9 @@
+[{"id": "0_0", "list_name": "LOCATION", "sub_list_name": null}
+,{"id": "0_1", "list_name": "LOCATION", "sub_list_name": "HOTEL"}
+,{"id": "0_2", "list_name": "LOCATION", "sub_list_name": "WAREHOUSE"}
+,{"id": "0_3", "list_name": "LOCATION", "sub_list_name": "APARTMENT"}
+,{"id": "0_4", "list_name": "LOCATION", "sub_list_name": "HOSPITAL"}
+,{"id": "1_0", "list_name": "PERSON", "sub_list_name": null}
+,{"id": "1_1", "list_name": "PERSON", "sub_list_name": "MANAGER"}
+,{"id": "1_2", "list_name": "PERSON", "sub_list_name": "EMPLOYEE"}
+,{"id": "1_3", "list_name": "PERSON", "sub_list_name": "DIRECTOR"}]
