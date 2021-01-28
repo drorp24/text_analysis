@@ -11,12 +11,16 @@ MIN_ENTITIES_PER_DOC = 2
 MAX_ENTITIES_PER_DOC = 20
 MAX_SCORE = 100
 MIN_SCORE = 0
-TEXT_LOCALIZATION = 'he_IL'  # Saudi Arabian Arabic
-GEO_LOCALIZATION = 'IL'  # Israel
+TEXT_LOCALIZATION = 'he_IL' # ar_AA
 
-ENTITY_TYPES = {
-    'LOCATION': [None, 'HOTEL', 'WAREHOUSE', 'APARTMENT', 'HOSPITAL'],
-    'PERSON': [None, 'MANAGER', 'EMPLOYEE', 'DIRECTOR']
+LISTS = {
+    'ENTITY_TYPE': ['LOCATION', 'PERSON', 'DEVICE'],
+    'PERSON_SUB_TYPE': ['MANAGER', 'EMPLOYEE', 'DIRECTOR'],
+    'LOCATION_SUB_TYPE': ['HOTEL', 'WAREHOUSE', 'APARTMENT', 'HOSPITAL'],
+    'DEVICE_SUB_TYPE': ['PHONE', 'IPAD'],
+    'PERSON_LOCATION_RELATION': ['OWNS', 'LIVES_IN', 'MANAGE'],
+    'DEVICE_LOCATION_RELATION': ['FOUND_AT'],
+    'PERSON_DEVICE_RELATION': ['OWNS', 'USE']
 }
 
 fake = Faker(TEXT_LOCALIZATION)
@@ -25,15 +29,11 @@ fake = Faker(TEXT_LOCALIZATION)
 # *************** HELPER CLASSES ******************************
 
 
-class EntityType:
-    def __init__(self, _id: str, list_name: str, sub_list_name: Optional[str]):
+class ListItemType:
+    def __init__(self, _id: str, list_name: str, value: Optional[str]):
         self.id = _id
         self.list_name = list_name
-        self.sub_list_name = sub_list_name
-
-    def get_full_id(self):
-        has_sub_list = self.sub_list_name is not None
-        return f"{self.list_name}_{self.sub_list_name}" if has_sub_list else f"{self.list_name}"
+        self.value = value
 
 
 class Document:
@@ -50,16 +50,16 @@ class TextInfo:
 
 
 class Entity:
-    def __init__(self, _id: str, doc_id: str, entity_type: EntityType, score: float, geolocation: str, textInfo: TextInfo):
+    def __init__(self, _id: str, doc_id: str, entity_type_id: str, entity_sub_type_id: Optional[str], score: float, geolocation: str, text_info: TextInfo):
         self.id = _id
         self.doc_id = doc_id
-        self.type_id = entity_type.list_name
-        self.sub_type_id = entity_type.sub_list_name
+        self.type_id = entity_type_id
+        self.sub_type_id = entity_sub_type_id
         self.score = score
         self.geolocation = geolocation
-        self.offset = textInfo.offset
-        self.length = textInfo.length
-        self.word = textInfo.word
+        self.offset = text_info.offset
+        self.length = text_info.length
+        self.word = text_info.word
 
     def __str__(self):
         return f"************************\nid: {self.id}, doc_id: {self.doc_id}, type_id: {self.type_id}, sub_type_id: {self.sub_type_id}, \n score: {self.score}, offset: {self.offset}, length: {self.length},\n geolocation: {self.geolocation}, word: {self.word}"
@@ -69,24 +69,15 @@ class Entity:
 
 class DocEntitiesGenerator:
     def __init__(self):
-        self.entity_types: List[EntityType] = None
-        self.docs: List[Document] = None
-        self.entities: List[EntityType] = None
-        self._geographic_polygons = self._load_json_file(file_name="buildings_poly_in_haifa", dir_path="../data")
+        self.lists: List[ListItemType] = []
+        self.docs: List[Document] = []
+        self.entities: List[Entity] = []
 
     def generate(self):
-        self.entity_types: List[EntityType] = self._generate_entity_type_list()
+        self.lists: List[ListItemType] = self._generate_lists()
         self.docs: List[Document] = self._generate_docs()
-        self.entities: List[EntityType] = self._generate_entities()
+        self.entities: List[Entity] = self._generate_entities()
 
-    def _load_json_file(self, file_name, dir_path):
-        with open(f'{dir_path}/{file_name}.json') as json_file:
-            data = json.load(json_file)
-        return data
-
-    def _get_random_entity_type(self) -> EntityType:
-        entity_types_len = len(self.entity_types)
-        return self.entity_types[randrange(start=0, stop=entity_types_len)]
 
     @staticmethod
     def get_fake_localized_geo_point():
@@ -96,52 +87,58 @@ class DocEntitiesGenerator:
 
     @staticmethod
     def cast_to_postgis_geography(point_or_polygon):
-        casted_geo: str = None
+        casted_geo: str = ""
         if isinstance(point_or_polygon, tuple):
-            casted_geo = f"POINT({point_or_polygon[1]} {point_or_polygon[0]})" # TODO check lat long order
+            casted_geo = f"POINT({point_or_polygon[1]} {point_or_polygon[0]})"  # TODO check lat long order
         else:
             list_to_flat = point_or_polygon['geometry']['coordinates'][0]
             flat_list = [val for sublist in list_to_flat for val in sublist]
             poly_as_couples = []
             for idx in range(0, len(flat_list), 2):
-                 poly_as_couples.append(f"{flat_list[idx]} {flat_list[idx + 1]}")
+                poly_as_couples.append(f"{flat_list[idx]} {flat_list[idx + 1]}")
             casted_geo = f"POLYGON(({','.join(poly_as_couples)}))"  # TODO check lat long order
         return casted_geo
 
-    def _get_entities_from_document(self, document: Document) -> List[EntityType]:
-        entities_count = randrange(start=0, stop=MAX_ENTITIES_PER_DOC + 1)
+    def _get_random_list_item(self, list_name: str, nullable: bool = False) -> ListItemType:
+        relevant_list: List[ListItemType] = [listItem for listItem in self.lists if listItem.list_name == list_name]
+        if nullable: relevant_list.append(None)
+        return relevant_list[randrange(start=0, stop=len(relevant_list))]
+
+    def _get_entities_from_document(self, document: Document, geographic_polygons: List[Dict]) -> List[Entity]:
         doc_words_shuffled = document.text.split(" ")
         shuffle(doc_words_shuffled)
         doc_entities = []
+        entities_count = randrange(start=0, stop=MAX_ENTITIES_PER_DOC + 1)
         for idx, word in enumerate(doc_words_shuffled[:entities_count]):
-            entity_type: EntityType = self._get_random_entity_type()
+            entity_type: ListItemType = self._get_random_list_item(list_name='ENTITY_TYPE')
+            entity_sub_type: Optional[ListItemType] = self._get_random_list_item(list_name=f"{entity_type.value}_SUB_TYPE", nullable=True)
+            entity_sub_type_id = entity_sub_type.id if entity_sub_type is not None else None
             random_true_false = random.random() > 0.5
             random_geo: Union[Tuple[str], Dict] = \
-            DocEntitiesGenerator.get_fake_localized_geo_point() if random_true_false else \
-                self._geographic_polygons[randrange(start=0, stop=len(self._geographic_polygons))]
-            textLocation = TextInfo(offset=document.text.index(word), length=len(word), word=word)
-            entity = Entity(_id=str(uuid.uuid4()), doc_id=document.id, entity_type=entity_type,
-                            score=randrange(start=0, stop=MAX_SCORE + 1), geolocation=DocEntitiesGenerator.cast_to_postgis_geography(random_geo), textInfo=textLocation)
+                DocEntitiesGenerator.get_fake_localized_geo_point() if random_true_false else \
+                    geographic_polygons[randrange(start=0, stop=len(geographic_polygons))]
+            text_location = TextInfo(offset=document.text.index(word), length=len(word), word=word)
+            entity = Entity(_id=str(uuid.uuid4()), doc_id=document.id, entity_type_id=entity_type.id, entity_sub_type_id=entity_sub_type_id,
+                            score=randrange(start=0, stop=MAX_SCORE + 1), geolocation=DocEntitiesGenerator.cast_to_postgis_geography(random_geo), text_info=text_location)
             doc_entities.append(entity)
 
         return doc_entities
 
-    def _generate_entities(self) -> List[EntityType]:
-        paragraphs: List[str] = fake.paragraphs()
-        entities_all_docs: List[EntityType] = []
+    def _generate_entities(self) -> List[Entity]:
+        entities_all_docs: List[Entity] = []
+        with open(f'../data/buildings_poly_in_haifa.json') as json_file:
+            _geographic_polygons = json.load(json_file)
         for doc in self.docs:
-            doc_entities: List[EntityType] = self._get_entities_from_document(document=doc)
+            doc_entities: List[Entity] = self._get_entities_from_document(document=doc, geographic_polygons=_geographic_polygons)
             entities_all_docs.extend(doc_entities)
         return entities_all_docs
 
-    def _generate_entity_type_list(self):
-        entity_types_keys: List[str] = [key for key in ENTITY_TYPES.keys()]
-        entity_types = []
-        for ext_idx, entity_type_key in enumerate(entity_types_keys):
-            sub_type_list = ENTITY_TYPES[entity_type_key]
-            for int_idx, entity_sub_type_key in enumerate(sub_type_list):
-                entity_types.append(EntityType(_id=f"{ext_idx}_{int_idx}", list_name=entity_type_key, sub_list_name=entity_sub_type_key))
-        return entity_types
+    def _generate_lists(self) -> List[ListItemType]:
+        list_items = []
+        for idx, (key, list_) in enumerate(LISTS.items()):
+            for inner_idx, value in enumerate(list_):
+                list_items.append(ListItemType(_id=f"{idx}_{inner_idx}", list_name=key, value=value))
+        return list_items
 
     @staticmethod
     def _generate_docs() -> List[Document]:
@@ -150,9 +147,9 @@ class DocEntitiesGenerator:
 
     def store_to_json_files(self, dir_path="../data"):
         lists_to_dump = [
-            {"file_name": "entity_type.json", "items": self.entity_types},
-            {"file_name":"documents.json", "items": self.docs},
-            {"file_name":"entities.json", "items": self.entities}
+            {"file_name": "lists.json", "items": self.lists},
+            {"file_name": "documents.json", "items": self.docs},
+            {"file_name": "entities.json", "items": self.entities}
         ]
         for item in lists_to_dump:
             with open(f"{dir_path}/{item['file_name']}", "w") as f:
@@ -163,6 +160,7 @@ class DocEntitiesGenerator:
         for entity in self.entities:
             print(entity)
         print(f"{len(self.entities)} entities from {len(self.docs)} documents")
+
 
 if __name__ == '__main__':
     docEntitiesGenerator = DocEntitiesGenerator()

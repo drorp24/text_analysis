@@ -19,11 +19,11 @@ metadata = MetaData()
 # ********* SCHEMA DEFINITION ****************
 TABLES = [
     {
-        "name": "entity_type",
+        "name": "lists",
         "columns": [
             Column(name="id", primary_key=True, type_=String),
             Column(name="list_name", type_=String),
-            Column(name="sub_list_name", type_=String, nullable=True)
+            Column(name="value", type_=String, nullable=True)
         ]
     },
     {
@@ -39,6 +39,7 @@ TABLES = [
             Column(name="id", primary_key=True, type_=String),
             Column(ForeignKey('documents.id'), name='doc_id', type_=String),
             Column(name="type_id", type_=String),
+            Column(name="sub_type_id", type_=String, nullable=True),
             Column(name="score", type_=Float),
             Column(name="geolocation", type_=Geography(srid=4326)),  # TODO geoalchemy2 type
             Column(name="offset", type_=Integer),
