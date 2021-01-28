@@ -38,13 +38,22 @@ TABLES = [
         "columns": [
             Column(name="id", primary_key=True, type_=String),
             Column(ForeignKey('documents.id'), name='doc_id', type_=String),
-            Column(name="type_id", type_=String),
-            Column(name="sub_type_id", type_=String, nullable=True),
+            Column(ForeignKey('lists.id'), name="type_id", type_=String),
+            Column(ForeignKey('lists.id'), name="sub_type_id", type_=String, nullable=True),
             Column(name="score", type_=Float),
             Column(name="geolocation", type_=Geography(srid=4326)),  # TODO geoalchemy2 type
             Column(name="offset", type_=Integer),
             Column(name="length", type_=Integer),
             Column(name="word", type_=String)
+        ]
+    },
+    {
+        "name": "relations",
+        "columns": [
+            Column(name="id", primary_key=True, type_=String),
+            Column(ForeignKey('entities.id'), name='from_entity_id', type_=String),
+            Column(ForeignKey('entities.id'), name='to_entity_id', type_=String),
+            Column(name="list_item_id", type_=String)
         ]
     }
 ]

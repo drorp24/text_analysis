@@ -4,6 +4,7 @@ import random
 from random import randrange, shuffle
 import json
 import uuid
+import fnc
 
 # *************** CONSTANTS AND INITIALIZATIONS ***************
 DOC_COUNT = 100
@@ -64,6 +65,12 @@ class Entity:
     def __str__(self):
         return f"************************\nid: {self.id}, doc_id: {self.doc_id}, type_id: {self.type_id}, sub_type_id: {self.sub_type_id}, \n score: {self.score}, offset: {self.offset}, length: {self.length},\n geolocation: {self.geolocation}, word: {self.word}"
 
+class Relation:
+    def __init__(self, _id: str, from_entity_id: str, to_entity_id: str, list_item_id: str):
+        self.id = _id
+        self.from_entity_id = from_entity_id
+        self.to_entity_id = to_entity_id
+        self.list_item_id = list_item_id
 
 # *************** LOGIC *********************************************
 
@@ -77,6 +84,7 @@ class DocEntitiesGenerator:
         self.lists: List[ListItemType] = self._generate_lists()
         self.docs: List[Document] = self._generate_docs()
         self.entities: List[Entity] = self._generate_entities()
+        self.relations: List[Relation] = self._generate_relations()
 
 
     @staticmethod
@@ -133,6 +141,29 @@ class DocEntitiesGenerator:
             entities_all_docs.extend(doc_entities)
         return entities_all_docs
 
+
+    def _generate_relations(self) -> List[Relation]:
+        relations_count = round((MIN_ENTITIES_PER_DOC + MAX_ENTITIES_PER_DOC) / 2 * DOC_COUNT)
+        lists_by_id = fnc.keyby("id", self.lists)
+        valid_from_to_ids = [('PERSON_SUB_TYPE','DEVICE_SUB_TYPE'),('PERSON_SUB_TYPE','LOCATION_SUB_TYPE'),
+                             ('DEVICE_SUB_TYPE','LOCATION_SUB_TYPE')]
+        relations = []
+        while relations_count:
+            from_entity = self.entities[randrange(start=0, stop=len(self.entities))]
+            to_entity = self.entities[randrange(start=0, stop=len(self.entities))]
+            if from_entity.sub_type_id is None or to_entity.sub_type_id is None: continue
+            if (lists_by_id[from_entity.sub_type_id].list_name, lists_by_id[to_entity.sub_type_id].list_name) in valid_from_to_ids:
+                from_ent_type = lists_by_id[from_entity.sub_type_id].list_name.split('_')[0]
+                to_ent_type = lists_by_id[to_entity.sub_type_id].list_name.split('_')[0]
+                possible_relation_list_name = f"{from_ent_type}_{to_ent_type}_RELATION"
+                if possible_relation_list_name not in LISTS: continue
+                possible_relations_ids = [item.id for item in self.lists if item.value in LISTS[possible_relation_list_name]]
+                relation = Relation(_id=str(uuid.uuid4()), from_entity_id=from_entity.id, to_entity_id=to_entity.id,
+                                    list_item_id=possible_relations_ids[randrange(start=0, stop=len(possible_relations_ids))])
+                relations.append(relation)
+            relations_count -= 1
+        return relations
+
     def _generate_lists(self) -> List[ListItemType]:
         list_items = []
         for idx, (key, list_) in enumerate(LISTS.items()):
@@ -149,7 +180,8 @@ class DocEntitiesGenerator:
         lists_to_dump = [
             {"file_name": "lists.json", "items": self.lists},
             {"file_name": "documents.json", "items": self.docs},
-            {"file_name": "entities.json", "items": self.entities}
+            {"file_name": "entities.json", "items": self.entities},
+            {"file_name": "relations.json", "items": self.relations}
         ]
         for item in lists_to_dump:
             with open(f"{dir_path}/{item['file_name']}", "w") as f:
