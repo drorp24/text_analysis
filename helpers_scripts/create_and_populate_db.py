@@ -1,7 +1,7 @@
 from typing import List, Dict
+import json
 from sqlalchemy import create_engine, Table, Column, Integer, String, MetaData, ForeignKey, Float
 from geoalchemy2 import Geography
-import json
 
 # ********* CONSTANTS ****************
 DIALECT = 'postgresql'
@@ -41,7 +41,7 @@ TABLES = [
             Column(ForeignKey('lists.id'), name="type_id", type_=String),
             Column(ForeignKey('lists.id'), name="sub_type_id", type_=String, nullable=True),
             Column(name="score", type_=Float),
-            Column(name="geolocation", type_=Geography(srid=4326)),  # TODO geoalchemy2 type
+            Column(name="geolocation", type_=Geography(srid=4326)),
             Column(name="offset", type_=Integer),
             Column(name="length", type_=Integer),
             Column(name="word", type_=String)

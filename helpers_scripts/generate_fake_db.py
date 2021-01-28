@@ -79,6 +79,7 @@ class DocEntitiesGenerator:
         self.lists: List[ListItemType] = []
         self.docs: List[Document] = []
         self.entities: List[Entity] = []
+        self.relations: List[Relation] = []
 
     def generate(self):
         self.lists: List[ListItemType] = self._generate_lists()
@@ -97,14 +98,14 @@ class DocEntitiesGenerator:
     def cast_to_postgis_geography(point_or_polygon):
         casted_geo: str = ""
         if isinstance(point_or_polygon, tuple):
-            casted_geo = f"POINT({point_or_polygon[1]} {point_or_polygon[0]})"  # TODO check lat long order
+            casted_geo = f"POINT({point_or_polygon[1]} {point_or_polygon[0]})"
         else:
             list_to_flat = point_or_polygon['geometry']['coordinates'][0]
             flat_list = [val for sublist in list_to_flat for val in sublist]
             poly_as_couples = []
             for idx in range(0, len(flat_list), 2):
                 poly_as_couples.append(f"{flat_list[idx]} {flat_list[idx + 1]}")
-            casted_geo = f"POLYGON(({','.join(poly_as_couples)}))"  # TODO check lat long order
+            casted_geo = f"POLYGON(({','.join(poly_as_couples)}))"
         return casted_geo
 
     def _get_random_list_item(self, list_name: str, nullable: bool = False) -> ListItemType:
@@ -117,7 +118,7 @@ class DocEntitiesGenerator:
         shuffle(doc_words_shuffled)
         doc_entities = []
         entities_count = randrange(start=0, stop=MAX_ENTITIES_PER_DOC + 1)
-        for idx, word in enumerate(doc_words_shuffled[:entities_count]):
+        for word in doc_words_shuffled[:entities_count]:
             entity_type: ListItemType = self._get_random_list_item(list_name='ENTITY_TYPE')
             entity_sub_type: Optional[ListItemType] = self._get_random_list_item(list_name=f"{entity_type.value}_SUB_TYPE", nullable=True)
             entity_sub_type_id = entity_sub_type.id if entity_sub_type is not None else None
@@ -134,7 +135,7 @@ class DocEntitiesGenerator:
 
     def _generate_entities(self) -> List[Entity]:
         entities_all_docs: List[Entity] = []
-        with open(f'../data/buildings_poly_in_haifa.json') as json_file:
+        with open('../data/buildings_poly_in_haifa.json') as json_file:
             _geographic_polygons = json.load(json_file)
         for doc in self.docs:
             doc_entities: List[Entity] = self._get_entities_from_document(document=doc, geographic_polygons=_geographic_polygons)
