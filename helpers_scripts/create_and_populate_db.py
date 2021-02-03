@@ -50,9 +50,9 @@ TABLES = [
     {
         "name": "relations",
         "columns": [
-            Column(name="id", primary_key=True, type_=String),
-            Column(ForeignKey('entities.id'), name='from_entity_id', type_=String),
-            Column(ForeignKey('entities.id'), name='to_entity_id', type_=String),
+            Column(ForeignKey('documents.id'), name='doc_id', type_=String, primary_key=True),
+            Column(ForeignKey('entities.id'), name='from_entity_id', type_=String, primary_key=True),
+            Column(ForeignKey('entities.id'), name='to_entity_id', type_=String, primary_key=True),
             Column(name="list_item_id", type_=String)
         ]
     }

@@ -12,7 +12,7 @@ MIN_ENTITIES_PER_DOC = 2
 MAX_ENTITIES_PER_DOC = 20
 MAX_SCORE = 100
 MIN_SCORE = 0
-TEXT_LOCALIZATION = 'he_IL' # ar_AA
+TEXT_LOCALIZATION = 'ar_AA' #
 
 LISTS = {
     'ENTITY_TYPE': ['LOCATION', 'PERSON', 'DEVICE'],
@@ -66,8 +66,9 @@ class Entity:
         return f"************************\nid: {self.id}, doc_id: {self.doc_id}, type_id: {self.type_id}, sub_type_id: {self.sub_type_id}, \n score: {self.score}, offset: {self.offset}, length: {self.length},\n geolocation: {self.geolocation}, word: {self.word}"
 
 class Relation:
-    def __init__(self, _id: str, from_entity_id: str, to_entity_id: str, list_item_id: str):
+    def __init__(self, _id: str, doc_id: str, from_entity_id: str, to_entity_id: str, list_item_id: str):
         self.id = _id
+        self.doc_id = doc_id
         self.from_entity_id = from_entity_id
         self.to_entity_id = to_entity_id
         self.list_item_id = list_item_id
@@ -149,9 +150,16 @@ class DocEntitiesGenerator:
         valid_from_to_ids = [('PERSON_SUB_TYPE','DEVICE_SUB_TYPE'),('PERSON_SUB_TYPE','LOCATION_SUB_TYPE'),
                              ('DEVICE_SUB_TYPE','LOCATION_SUB_TYPE')]
         relations = []
+        entities_by_doc_id = {}
+        for entity in self.entities:
+            if entity.doc_id not in entities_by_doc_id:
+                entities_by_doc_id[entity.doc_id] = []
+            entities_by_doc_id[entity.doc_id].append(entity)
         while relations_count:
             from_entity = self.entities[randrange(start=0, stop=len(self.entities))]
-            to_entity = self.entities[randrange(start=0, stop=len(self.entities))]
+            from_ommited_entities = list(fnc.filter(lambda item: item.id != from_entity.id ,entities_by_doc_id[from_entity.doc_id]))
+            if len(from_ommited_entities) < 1: continue
+            to_entity = from_ommited_entities[randrange(start=0, stop=len(from_ommited_entities))]
             if from_entity.sub_type_id is None or to_entity.sub_type_id is None: continue
             if (lists_by_id[from_entity.sub_type_id].list_name, lists_by_id[to_entity.sub_type_id].list_name) in valid_from_to_ids:
                 from_ent_type = lists_by_id[from_entity.sub_type_id].list_name.split('_')[0]
@@ -159,11 +167,11 @@ class DocEntitiesGenerator:
                 possible_relation_list_name = f"{from_ent_type}_{to_ent_type}_RELATION"
                 if possible_relation_list_name not in LISTS: continue
                 possible_relations_ids = [item.id for item in self.lists if item.value in LISTS[possible_relation_list_name]]
-                relation = Relation(_id=str(uuid.uuid4()), from_entity_id=from_entity.id, to_entity_id=to_entity.id,
+                relation = Relation(_id=str(uuid.uuid4()), doc_id=from_entity.doc_id,from_entity_id=from_entity.id, to_entity_id=to_entity.id,
                                     list_item_id=possible_relations_ids[randrange(start=0, stop=len(possible_relations_ids))])
                 relations.append(relation)
             relations_count -= 1
-        return relations
+        return fnc.unionby({'doc_id', 'from_entity_id', 'to_entity_id'},relations)
 
     def _generate_lists(self) -> List[ListItemType]:
         list_items = []

@@ -1,6 +1,11 @@
 Flask
+Flask-Cors
+waitress
 SQLAlchemy
 Faker
 psycopg2-binary
 geoalchemy2
 fnc
+python-dotenv
+pytest
+webargs
