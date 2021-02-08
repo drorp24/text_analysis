@@ -14,10 +14,10 @@ def _execute(query):
         return connection.execute(query)
 
 
-def _normalize_result(result):
+def _normalize_result(result, get_first_row: bool):
     normalized_result = [dict(row) for row in result]
     if len(normalized_result) <= 1:
-        return None if len(normalized_result) < 1 else normalized_result[0]
+        return None if len(normalized_result) < 1 else normalized_result[0] if get_first_row else normalized_result
     return normalized_result
 
 
@@ -28,9 +28,9 @@ def select_all_table(table: str) -> Any:
     return _normalize_result(result=result)
 
 
-def select_where_col(table: str, col: str, value: Any) -> Any:
+def select_where_col(table: str, col: str, value: Any, get_first_row=False) -> Any:
     table_to_select: Table = my_db_meta.tables[table]
     cols = [column if type(column.type) != Geography else ST_AsGeoJSON(column).label(column.name) for column in table_to_select.c]
     query = select(cols).where(table_to_select.c[col] == value)
     result = _execute(query)
-    return _normalize_result(result=result)
+    return _normalize_result(result=result, get_first_row=get_first_row)
