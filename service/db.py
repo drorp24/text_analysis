@@ -25,7 +25,7 @@ def select_all_table(table: str) -> Any:
     table_to_select = my_db_meta.tables[table]
     select_all_query = select([table_to_select])
     result = _execute(select_all_query)
-    return _normalize_result(result=result)
+    return _normalize_result(result=result, get_first_row=False)
 
 
 def select_where_col(table: str, col: str, value: Any, get_first_row=False) -> Any:
