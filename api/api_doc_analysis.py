@@ -40,11 +40,12 @@ def doc_analysis(args, **kwargs):
     if document is None:
         abort(404, f"document with id = '{doc_id}' not found")
     entities = db.select_where_col(table="entities", col="doc_id", value=doc_id)
-    entities, blocks = _normalize_entities(entities=entities)
+    entities, offsets = _normalize_entities(entities=entities)
     relations = _normalize_relations(relations=db.select_where_col(table="relations", col="doc_id", value=doc_id))
     return jsonify({
         'doc_id': doc_id,
-        'blocks': {'text': document['text'], 'offsets': blocks},
+        'text': document['text'],
+        'offsets': offsets,
         'entities': entities,
         'relations': relations
     })

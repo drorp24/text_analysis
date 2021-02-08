@@ -4,7 +4,7 @@ Tests for API handlers
 import json
 import pytest
 from server import create_app
-
+import fnc
 
 @pytest.fixture(scope='module', autouse=True)
 def client():
@@ -35,7 +35,8 @@ def test_document_analysis(client):
 def test_entities_correct_offset_and_length(client):
     response = client.get('/document/analysis/doc_1/')
     parsed_data = json.loads(response.data)
-    entities = parsed_data.get('entities')
+    entities_by_id = fnc.keyby('id', parsed_data.get('entities'))
     text = parsed_data.get('text')
-    for entity in entities:
-        assert text[entity["offset"]:entity["offset"] + entity["length"]] == entity["word"]
+    offsets = parsed_data.get('offsets')
+    for offset in offsets:
+        assert text[offset["offset"]:offset["offset"] + offset["length"]] == entities_by_id[offset['id']]["word"]
