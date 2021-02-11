@@ -13,17 +13,18 @@ from .schemas import doc_analysis_schema
 import fnc
 
 
-def _normalize_entities(entities: List[Dict]) -> Tuple[List[Dict], List[Dict]]:
+def _normalize_entities(entities: List[Dict]) -> Tuple[Dict, List[Dict]]:
     if entities is None:
         return [], []
     entities_without_text_meta = fnc.compose(
         (fnc.map, lambda entity: {**fnc.omit(['offset', 'length', 'doc_id'], entity),
                                   'sub_type_id': [entity['sub_type_id']],
                                   'geolocation': json.loads(entity['geolocation'])}),
-        (fnc.unionby, 'id')
+        (fnc.unionby, 'id'),
+        (fnc.keyby, 'id')
     )(entities)
     entities_text_meta = fnc.map(lambda entity: fnc.pick(['offset', 'length', 'id'], entity), entities)
-    return list(entities_without_text_meta), list(entities_text_meta)
+    return entities_without_text_meta, list(entities_text_meta)
 
 
 def _normalize_relations(relations: List[Dict]) -> List[Dict]:
