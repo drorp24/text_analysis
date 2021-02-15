@@ -35,7 +35,7 @@ def test_document_analysis(client):
 def test_entities_correct_offset_and_length(client):
     response = client.get('/document/analysis/doc_1/')
     parsed_data = json.loads(response.data)
-    entities_by_id = fnc.keyby('id', parsed_data.get('entities'))
+    entities_by_id = parsed_data.get('entities')
     text = parsed_data.get('text')
     offsets = parsed_data.get('offsets')
     for offset in offsets:
