@@ -6,7 +6,7 @@ from geoalchemy2 import Geography
 # ********* CONSTANTS ****************
 DIALECT = 'postgresql'
 USERNAME = 'postgres'
-PASSWORD = 'deri1978'
+PASSWORD = '29092012'
 HOST = 'localhost:5432'
 DATABASE = 'text_analysis'
 DATA_DIR_PATH = "../data"
