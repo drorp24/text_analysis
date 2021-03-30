@@ -2,9 +2,11 @@
 Tests for API handlers
 """
 import json
+
 import pytest
+
 from server import create_app
-import fnc
+
 
 @pytest.fixture(scope='module', autouse=True)
 def client():
@@ -40,3 +42,13 @@ def test_entities_correct_offset_and_length(client):
     offsets = parsed_data.get('offsets')
     for offset in offsets:
         assert text[offset["offset"]:offset["offset"] + offset["length"]] == entities_by_id[offset['id']]["word"]
+
+
+def test_document_exist(client):
+    response = client.get('/document/exist/doc_1/')
+    parsed_data = json.loads(response.data)
+    assert response.status_code == 200
+    assert parsed_data.get('exist') is True
+    response = client.get('/document/exist/not_exist_id/')
+    parsed_data = json.loads(response.data)
+    assert parsed_data.get('exist') is False

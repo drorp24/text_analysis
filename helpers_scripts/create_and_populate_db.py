@@ -1,9 +1,11 @@
-from typing import List, Dict
 import json
-from sqlalchemy import create_engine, Table, Column, Integer, String, MetaData, ForeignKey, Float
-from geoalchemy2 import Geography
+from typing import List, Dict
 
+from geoalchemy2 import Geography
+from sqlalchemy import create_engine, Table, Column, Integer, String, MetaData, ForeignKey, Float
 # ********* CONSTANTS ****************
+from sqlalchemy.engine import Engine
+
 DIALECT = 'postgresql'
 USERNAME = 'postgres'
 PASSWORD = 'deri1978'
@@ -12,7 +14,7 @@ DATABASE = 'text_analysis'
 DATA_DIR_PATH = "../data"
 
 # ********* SqlAlchemy INIT ****************
-engine = create_engine(f'{DIALECT}://{USERNAME}:{PASSWORD}@{HOST}/{DATABASE}')
+engine: Engine = create_engine(f'{DIALECT}://{USERNAME}:{PASSWORD}@{HOST}/{DATABASE}')
 metadata = MetaData()
 # engine.bind = metadata
 
@@ -65,7 +67,7 @@ def drop_tables():
 
 
 def create_table(table_definition: Dict):
-    return Table(table_definition['name'], metadata,  *table_definition['columns'])
+    return Table(table_definition['name'], metadata, *table_definition['columns'])
 
 
 def populate_tables(tables: List[Table]):

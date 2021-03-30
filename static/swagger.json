@@ -1,0 +1,43 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/lists": {
+      "get": {
+        "tags": [
+          "general"
+        ],
+        "summary": "all relevant 'enums' in a single list, entity type (for instance) refers to item in this list",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/document/analysis/doc_1": {
+      "tags": [
+          "document analysis"
+        ],
+      "get": {
+        "summary": "entities per doc_id",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  },
+  "info": {
+    "description": "text analysis webserver api",
+    "version": "1.0.0",
+    "title": "Text Analysis",
+    "contact": {
+      "email": "shayde@gmail.com"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    }
+  }
+}

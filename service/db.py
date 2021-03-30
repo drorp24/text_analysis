@@ -3,8 +3,9 @@ from typing import Any
 from sqlalchemy import create_engine, MetaData, select, Table
 from geoalchemy2 import Geography
 from geoalchemy2.functions import ST_AsGeoJSON
+from sqlalchemy.engine import Engine
 
-engine = create_engine(os.getenv('DB_URL'))
+engine: Engine = create_engine(os.getenv('DB_URL'))
 my_db_meta = MetaData()
 my_db_meta.reflect(bind=engine)
 

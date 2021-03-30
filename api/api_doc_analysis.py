@@ -4,13 +4,13 @@ doc_analysis API route handlers
 import json
 from typing import Dict, Tuple, List
 
-from flask import jsonify, abort
-import logging
-from webargs.flaskparser import use_args
-from . import api
-from service import db
-from .schemas import doc_analysis_schema
 import fnc
+from flask import jsonify, abort
+from webargs.flaskparser import use_args
+
+from service import db
+from . import api
+from .schemas import doc_analysis_schema
 
 
 def _normalize_entities(entities: List[Dict]) -> Tuple[Dict, List[Dict]]:
@@ -50,3 +50,14 @@ def doc_analysis(args, **kwargs):
         'entities': entities,
         'relations': relations
     })
+
+
+@api.route('/document/exist/<doc_id>/')
+@use_args(doc_analysis_schema, location="view_args")
+def document_exist(args, **kwargs):
+    doc_id: str = kwargs['doc_id']
+    document = db.select_where_col(table="documents", col="id", value=doc_id, get_first_row=True)
+    return {
+        'exist': document is not None,
+        'document_id': doc_id
+    }

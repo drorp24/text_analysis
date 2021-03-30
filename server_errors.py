@@ -1,13 +1,13 @@
 """
 API error handlers
 """
-from typing import Dict, Any
+from typing import Any, Tuple
 
-from flask import jsonify
 import fnc
+from flask import jsonify
 
 
-def _format_error(error: Any, code: int, general_message='Unknown') -> Dict:
+def _format_error(error: Any, code: int, general_message='Unknown') -> Tuple:
     error_type = fnc.get('name', error, default='Not Found')
     code_ = fnc.get('code', error, default=code)
     message = error if type(error) == str else fnc.get('description', error)
