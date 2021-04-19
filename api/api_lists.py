@@ -1,11 +1,11 @@
 """
 lists API route handlers
 """
-from flask import jsonify
-import logging
-import fnc
-from . import api
+from flask import jsonify, Blueprint
+
 from service import db
+
+api = Blueprint('lists', __name__)
 
 
 @api.route('/lists')

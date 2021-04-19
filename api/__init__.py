@@ -1,11 +1,8 @@
 """
 Blueprint for API endpoints
 """
-from flask import Blueprint
-
-api = Blueprint('api', __name__)
 
 # API files here
-from . import api_doc_analysis
-from . import api_lists
-
+from .api_doc_analysis import api as api_doc_analysis
+from .api_feedback import api as api_feedback
+from .api_lists import api as api_lists

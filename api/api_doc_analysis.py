@@ -5,12 +5,13 @@ import json
 from typing import Dict, Tuple, List
 
 import fnc
-from flask import jsonify, abort
+from flask import jsonify, abort, Blueprint
 from webargs.flaskparser import use_args
 
 from service import db
-from . import api
 from .schemas import doc_analysis_schema
+
+api = Blueprint('analysis', __name__)
 
 
 def _normalize_entities(entities: List[Dict]) -> Tuple[Dict, List[Dict]]:

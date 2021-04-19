@@ -10,8 +10,10 @@ from flask import jsonify
 def _format_error(error: Any, code: int, general_message='Unknown') -> Tuple:
     error_type = fnc.get('name', error, default='Not Found')
     code_ = fnc.get('code', error, default=code)
-    message = error if type(error) == str else fnc.get('description', error)
-    message = message if message is not None else fnc.get('message', error, default=general_message)
+    desc = error
+    while not isinstance(desc, str) and desc is not None:
+        desc = desc if type(desc) == str else fnc.get('description', desc)
+    message = desc if desc is not None else general_message
     headers = fnc.get("headers", error, default=None)
     return jsonify(dict(error=error_type, code=code_, message=message.capitalize())), headers, code_
 
