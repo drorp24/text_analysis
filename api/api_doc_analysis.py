@@ -14,13 +14,24 @@ from .schemas import doc_analysis_schema
 api = Blueprint('analysis', __name__)
 
 
-def _normalize_entities(entities: List[Dict]) -> Tuple[Dict, List[Dict]]:
+def _normalize_entities(entities: List[Dict], entity_id_to_feedbacks: Dict[str, Dict]) -> Tuple[Dict, List[Dict]]:
+    def get_geolocations_arr(entity, entity_id_to_feedbacks: Dict[str, Dict]):
+        if entity['id'] not in entity_id_to_feedbacks:
+            return [{
+                **json.loads(entity['geolocation'])
+            }]
+        return [{
+            **entity_id_to_feedbacks[entity['id']][0],
+            **json.loads(entity['geolocation'])
+        }]
+
     if entities is None:
         return [], []
     entities_without_text_meta = fnc.compose(
-        (fnc.map, lambda entity: {**fnc.omit(['offset', 'length', 'doc_id'], entity),
+        (fnc.map, lambda entity: {**fnc.omit(['offset', 'length', 'doc_id', 'geolocation'], entity),
                                   'sub_type_id': [entity['sub_type_id']],
-                                  'geolocation': json.loads(entity['geolocation'])}),
+                                  'geolocations': get_geolocations_arr(entity=entity,
+                                                                       entity_id_to_feedbacks=entity_id_to_feedbacks)}),
         (fnc.unionby, 'id'),
         (fnc.keyby, 'id')
     )(entities)
@@ -42,7 +53,19 @@ def doc_analysis(args, **kwargs):
     if document is None:
         abort(404, f"document with id = '{doc_id}' not found")
     entities = db.select_where_col(table="entities", col="doc_id", value=doc_id)
-    entities, offsets = _normalize_entities(entities=entities)
+    entity_id_to_feedbacks = {}
+    for entity in entities:
+        entity_id = entity['id']
+        user_feedbacks = db.select_all_where(table_name="entity_location_feedback",
+                                             conditions={'document_id': doc_id,
+                                                         'entity_id': entity_id,
+                                                         'username': 'user_x'})
+        if user_feedbacks is None:
+            continue
+        # if entity_id not in entity_id_to_feedbacks:
+        #     entity_id_to_feedbacks[entity_id] = []
+        entity_id_to_feedbacks[entity_id] = user_feedbacks
+    entities, offsets = _normalize_entities(entities=entities, entity_id_to_feedbacks=entity_id_to_feedbacks)
     relations = _normalize_relations(relations=db.select_where_col(table="relations", col="doc_id", value=doc_id))
     return jsonify({
         'doc_id': doc_id,

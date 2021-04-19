@@ -30,6 +30,13 @@ def select_all_table(table: str) -> Any:
     return _normalize_result(result=result, get_first_row=False)
 
 
+def select_all_where(table_name: str, conditions: Dict) -> Any:
+    where_part: str = ' AND '.join([f"{key} = '{value}'" for key, value in conditions.items()])
+    select_all_where_query: str = f"""SELECT * FROM {table_name} where {where_part}"""
+    result = _execute(select_all_where_query)
+    return _normalize_result(result=result, get_first_row=False)
+
+
 def select_where_col(table: str, col: str, value: Any, get_first_row=False) -> Any:
     table_to_select: Table = my_db_meta.tables[table]
     cols = [column if type(column.type) != Geography else ST_AsGeoJSON(column).label(column.name) for column in
