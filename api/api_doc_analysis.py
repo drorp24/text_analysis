@@ -18,10 +18,12 @@ def _normalize_entities(entities: List[Dict], entity_id_to_feedbacks: Dict[str, 
     def get_geolocations_arr(entity, entity_id_to_feedbacks: Dict[str, Dict]):
         if entity['id'] not in entity_id_to_feedbacks:
             return [{
-                **json.loads(entity['geolocation'])
+                **json.loads(entity['geolocation']),
+                'entity_location_id': entity['id'],
+                'feedback': None
             }]
         return [{
-            **entity_id_to_feedbacks[entity['id']][0],
+            **fnc.omit(['username', 'type', 'entity_id', 'document_id'], entity_id_to_feedbacks[entity['id']][0]),
             **json.loads(entity['geolocation'])
         }]
 
