@@ -17,23 +17,23 @@ api = Blueprint('analysis', __name__)
 def _normalize_entities(entities: List[Dict], entity_id_to_feedbacks: Dict[str, Dict]) -> Tuple[Dict, List[Dict]]:
     def get_geolocations_arr(entity, entity_id_to_feedbacks: Dict[str, Dict]):
         if entity['id'] not in entity_id_to_feedbacks:
-            return [{
+            return {
                 **json.loads(entity['geolocation']),
                 'entity_location_id': entity['id'],
                 'feedback': None
-            }]
-        return [{
+            }
+        return {
             **fnc.omit(['username', 'type', 'entity_id', 'document_id'], entity_id_to_feedbacks[entity['id']][0]),
             **json.loads(entity['geolocation'])
-        }]
+        }
 
     if entities is None:
         return [], []
     entities_without_text_meta = fnc.compose(
         (fnc.map, lambda entity: {**fnc.omit(['offset', 'length', 'doc_id', 'geolocation'], entity),
                                   'sub_type_id': [entity['sub_type_id']],
-                                  'geolocations': get_geolocations_arr(entity=entity,
-                                                                       entity_id_to_feedbacks=entity_id_to_feedbacks)}),
+                                  'geolocation': get_geolocations_arr(entity=entity,
+                                                                      entity_id_to_feedbacks=entity_id_to_feedbacks)}),
         (fnc.unionby, 'id'),
         (fnc.keyby, 'id')
     )(entities)
