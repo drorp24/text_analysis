@@ -1,18 +1,19 @@
-from typing import Dict, List, Optional, Tuple, Union
-from faker import Faker
-import random
-from random import randrange, shuffle
 import json
+import random
 import uuid
+from random import randrange, shuffle
+from typing import Dict, List, Optional, Tuple, Union
+
 import fnc
+from faker import Faker
 
 # *************** CONSTANTS AND INITIALIZATIONS ***************
 DOC_COUNT = 100
-MIN_ENTITIES_PER_DOC = 2
-MAX_ENTITIES_PER_DOC = 20
+MIN_ENTITIES_PER_DOC = 50
+MAX_ENTITIES_PER_DOC = 100
 MAX_SCORE = 100
 MIN_SCORE = 0
-TEXT_LOCALIZATION = 'ar_AA' #
+TEXT_LOCALIZATION = 'ar_AA'  #
 
 LISTS = {
     'ENTITY_TYPE': ['LOCATION', 'PERSON', 'DEVICE'],
@@ -52,7 +53,8 @@ class TextInfo:
 
 
 class Entity:
-    def __init__(self, _id: str, doc_id: str, entity_type_id: str, entity_sub_type_id: Optional[str], score: float, geolocation: str, text_info: TextInfo):
+    def __init__(self, _id: str, doc_id: str, entity_type_id: str, entity_sub_type_id: Optional[str], score: float,
+                 geolocation: str, text_info: TextInfo):
         self.id = _id
         self.doc_id = doc_id
         self.type_id = entity_type_id
@@ -66,6 +68,7 @@ class Entity:
     def __str__(self):
         return f"************************\nid: {self.id}, doc_id: {self.doc_id}, type_id: {self.type_id}, sub_type_id: {self.sub_type_id}, \n score: {self.score}, offset: {self.offset}, length: {self.length},\n geolocation: {self.geolocation}, word: {self.word}"
 
+
 class Relation:
     def __init__(self, _id: str, doc_id: str, from_entity_id: str, to_entity_id: str, list_item_id: str):
         self.id = _id
@@ -73,6 +76,7 @@ class Relation:
         self.from_entity_id = from_entity_id
         self.to_entity_id = to_entity_id
         self.list_item_id = list_item_id
+
 
 # *************** LOGIC *********************************************
 
@@ -88,7 +92,6 @@ class DocEntitiesGenerator:
         self.docs: List[Document] = self._generate_docs()
         self.entities: List[Entity] = self._generate_entities()
         self.relations: List[Relation] = self._generate_relations()
-
 
     @staticmethod
     def get_fake_localized_geo_point():
@@ -122,15 +125,19 @@ class DocEntitiesGenerator:
         entities_count = randrange(start=0, stop=MAX_ENTITIES_PER_DOC + 1)
         for word in doc_words_shuffled[:entities_count]:
             entity_type: ListItemType = self._get_random_list_item(list_name='ENTITY_TYPE')
-            entity_sub_type: Optional[ListItemType] = self._get_random_list_item(list_name=f"{entity_type.value}_SUB_TYPE", nullable=True)
+            entity_sub_type: Optional[ListItemType] = self._get_random_list_item(
+                list_name=f"{entity_type.value}_SUB_TYPE", nullable=True)
             entity_sub_type_id = entity_sub_type.id if entity_sub_type is not None else None
             random_true_false = random.random() > 0.5
             random_geo: Union[Tuple[str], Dict] = \
                 DocEntitiesGenerator.get_fake_localized_geo_point() if random_true_false else \
                     geographic_polygons[randrange(start=0, stop=len(geographic_polygons))]
             text_location = TextInfo(offset=document.text.index(word), length=len(word), word=word)
-            entity = Entity(_id=str(uuid.uuid4()), doc_id=document.id, entity_type_id=entity_type.id, entity_sub_type_id=entity_sub_type_id,
-                            score=randrange(start=0, stop=MAX_SCORE + 1), geolocation=DocEntitiesGenerator.cast_to_postgis_geography(random_geo), text_info=text_location)
+            entity = Entity(_id=str(uuid.uuid4()), doc_id=document.id, entity_type_id=entity_type.id,
+                            entity_sub_type_id=entity_sub_type_id,
+                            score=randrange(start=0, stop=MAX_SCORE + 1),
+                            geolocation=DocEntitiesGenerator.cast_to_postgis_geography(random_geo),
+                            text_info=text_location)
             doc_entities.append(entity)
 
         return doc_entities
@@ -140,16 +147,16 @@ class DocEntitiesGenerator:
         with open('../data/buildings_poly_in_haifa.json') as json_file:
             _geographic_polygons = json.load(json_file)
         for doc in self.docs:
-            doc_entities: List[Entity] = self._get_entities_from_document(document=doc, geographic_polygons=_geographic_polygons)
+            doc_entities: List[Entity] = self._get_entities_from_document(document=doc,
+                                                                          geographic_polygons=_geographic_polygons)
             entities_all_docs.extend(doc_entities)
         return entities_all_docs
-
 
     def _generate_relations(self) -> List[Relation]:
         relations_count = round((MIN_ENTITIES_PER_DOC + MAX_ENTITIES_PER_DOC) / 2 * DOC_COUNT)
         lists_by_id = fnc.keyby("id", self.lists)
-        valid_from_to_ids = [('PERSON_SUB_TYPE','DEVICE_SUB_TYPE'),('PERSON_SUB_TYPE','LOCATION_SUB_TYPE'),
-                             ('DEVICE_SUB_TYPE','LOCATION_SUB_TYPE')]
+        valid_from_to_ids = [('PERSON_SUB_TYPE', 'DEVICE_SUB_TYPE'), ('PERSON_SUB_TYPE', 'LOCATION_SUB_TYPE'),
+                             ('DEVICE_SUB_TYPE', 'LOCATION_SUB_TYPE')]
         relations = []
         entities_by_doc_id = {}
         for entity in self.entities:
@@ -158,21 +165,26 @@ class DocEntitiesGenerator:
             entities_by_doc_id[entity.doc_id].append(entity)
         while relations_count:
             from_entity = self.entities[randrange(start=0, stop=len(self.entities))]
-            from_ommited_entities = list(fnc.filter(lambda item: item.id != from_entity.id ,entities_by_doc_id[from_entity.doc_id]))
+            from_ommited_entities = list(
+                fnc.filter(lambda item: item.id != from_entity.id, entities_by_doc_id[from_entity.doc_id]))
             if len(from_ommited_entities) < 1: continue
             to_entity = from_ommited_entities[randrange(start=0, stop=len(from_ommited_entities))]
             if from_entity.sub_type_id is None or to_entity.sub_type_id is None: continue
-            if (lists_by_id[from_entity.sub_type_id].list_name, lists_by_id[to_entity.sub_type_id].list_name) in valid_from_to_ids:
+            if (lists_by_id[from_entity.sub_type_id].list_name,
+                lists_by_id[to_entity.sub_type_id].list_name) in valid_from_to_ids:
                 from_ent_type = lists_by_id[from_entity.sub_type_id].list_name.split('_')[0]
                 to_ent_type = lists_by_id[to_entity.sub_type_id].list_name.split('_')[0]
                 possible_relation_list_name = f"{from_ent_type}_{to_ent_type}_RELATION"
                 if possible_relation_list_name not in LISTS: continue
-                possible_relations_ids = [item.id for item in self.lists if item.value in LISTS[possible_relation_list_name]]
-                relation = Relation(_id=str(uuid.uuid4()), doc_id=from_entity.doc_id,from_entity_id=from_entity.id, to_entity_id=to_entity.id,
-                                    list_item_id=possible_relations_ids[randrange(start=0, stop=len(possible_relations_ids))])
+                possible_relations_ids = [item.id for item in self.lists if
+                                          item.value in LISTS[possible_relation_list_name]]
+                relation = Relation(_id=str(uuid.uuid4()), doc_id=from_entity.doc_id, from_entity_id=from_entity.id,
+                                    to_entity_id=to_entity.id,
+                                    list_item_id=possible_relations_ids[
+                                        randrange(start=0, stop=len(possible_relations_ids))])
                 relations.append(relation)
             relations_count -= 1
-        return fnc.unionby({'doc_id', 'from_entity_id', 'to_entity_id'},relations)
+        return fnc.unionby({'doc_id', 'from_entity_id', 'to_entity_id'}, relations)
 
     def _generate_lists(self) -> List[ListItemType]:
         list_items = []
@@ -183,7 +195,9 @@ class DocEntitiesGenerator:
 
     @staticmethod
     def _generate_docs() -> List[Document]:
-        docs = [Document(_id=f"doc_{idx}", text="/n".join(fake.paragraphs())) for idx in range(DOC_COUNT)]
+        number_sentences = fake.random.randint(10, 100)
+        docs = [Document(_id=f"doc_{idx}", text="/n".join(fake.paragraphs(nb=number_sentences))) for idx in
+                range(DOC_COUNT)]
         return docs
 
     def store_to_json_files(self, dir_path="../data"):
