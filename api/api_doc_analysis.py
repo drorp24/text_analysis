@@ -21,8 +21,10 @@ fake_english = Faker()
 def _normalize_entities(entities: List[Dict], entity_id_to_feedbacks: Dict[str, Dict]) -> Tuple[Dict, List[Dict]]:
     def get_geolocations_arr(entity, entity_id_to_feedbacks: Dict[str, Dict]):
         if entity['id'] not in entity_id_to_feedbacks:
-            num_props: int = fake.random.randint(5, 15)
+            num_props: int = fake.random.randint(5, 25)
             details = {fake_english.word(): fake_english.name() for i in range(num_props)}
+            fix_details = {'schema_name': fake_english.sentence(), 'table_name': fake_english.sentence()}
+            details = {**details, 'headers': fix_details}
             return {
                 'geometry': json.loads(entity['geolocation']),
                 'properties': {
