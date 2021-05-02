@@ -19,25 +19,21 @@ fake_english = Faker()
 
 
 def _normalize_entities(entities: List[Dict], entity_id_to_feedbacks: Dict[str, Dict]) -> Tuple[Dict, List[Dict]]:
-    def get_geolocations_arr(entity, entity_id_to_feedbacks: Dict[str, Dict]):
-        if entity['id'] not in entity_id_to_feedbacks:
-            num_props: int = fake.random.randint(5, 25)
-            details = {fake_english.word(): fake_english.name() for i in range(num_props)}
-            headers = {'schema_name': fake_english.sentence(), 'table_name': fake_english.sentence()}
-            details = {**details}
-            return {
-                'geometry': json.loads(entity['geolocation']),
-                'properties': {
-                    'entity_location_id': entity['id'],
-                    'feedback': None,
-                    'explain': fake.text(),
-                    'details': details,
-                    'headers': headers
-                }
-            }
+    def get_geolocations_arr(entity, ent_id_to_feedback: Dict[str, Dict]):
+        feedback: str = None if entity['id'] not in ent_id_to_feedback else \
+            ent_id_to_feedback[entity['id']][0]['feedback']
+        num_props: int = fake.random.randint(5, 25)
+        details = {fake_english.word(): fake_english.name() for i in range(num_props)}
+        headers = {'schema_name': fake_english.sentence(), 'table_name': fake_english.sentence()}
         return {
-            **fnc.omit(['username', 'type', 'entity_id', 'document_id'], entity_id_to_feedbacks[entity['id']][0]),
-            **json.loads(entity['geolocation'])
+            'geometry': json.loads(entity['geolocation']),
+            'properties': {
+                'entity_location_id': entity['id'],
+                'feedback': feedback,
+                'explain': fake.text(),
+                'details': details,
+                'headers': headers
+            }
         }
 
     if entities is None:
@@ -46,7 +42,7 @@ def _normalize_entities(entities: List[Dict], entity_id_to_feedbacks: Dict[str, 
         (fnc.map, lambda entity: {**fnc.omit(['offset', 'length', 'doc_id', 'geolocation'], entity),
                                   'sub_type_id': [entity['sub_type_id']],
                                   'geolocation': get_geolocations_arr(entity=entity,
-                                                                      entity_id_to_feedbacks=entity_id_to_feedbacks)}),
+                                                                      ent_id_to_feedback=entity_id_to_feedbacks)}),
         (fnc.unionby, 'id'),
         (fnc.keyby, 'id')
     )(entities)
