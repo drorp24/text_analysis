@@ -5,6 +5,7 @@ import json
 from typing import Dict, Tuple, List
 
 import fnc
+from faker import Faker
 from flask import jsonify, abort, Blueprint
 from webargs.flaskparser import use_args
 
@@ -12,15 +13,24 @@ from service import db
 from .schemas import doc_analysis_schema
 
 api = Blueprint('analysis', __name__)
+TEXT_LOCALIZATION = 'ar_AA'
+fake: Faker = Faker(TEXT_LOCALIZATION)
+fake_english = Faker()
 
 
 def _normalize_entities(entities: List[Dict], entity_id_to_feedbacks: Dict[str, Dict]) -> Tuple[Dict, List[Dict]]:
     def get_geolocations_arr(entity, entity_id_to_feedbacks: Dict[str, Dict]):
         if entity['id'] not in entity_id_to_feedbacks:
+            num_props: int = fake.random.randint(5, 15)
+            details = {fake_english.word(): fake_english.name() for i in range(num_props)}
             return {
-                **json.loads(entity['geolocation']),
-                'entity_location_id': entity['id'],
-                'feedback': None
+                'geometry': json.loads(entity['geolocation']),
+                'properties': {
+                    'entity_location_id': entity['id'],
+                    'feedback': None,
+                    'explain': fake.text(),
+                    'details': details
+                }
             }
         return {
             **fnc.omit(['username', 'type', 'entity_id', 'document_id'], entity_id_to_feedbacks[entity['id']][0]),
