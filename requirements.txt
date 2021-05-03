@@ -11,3 +11,5 @@ pytest
 webargs
 python-json
 python-multipart
+python-jose
+python-multipart
