@@ -2,22 +2,19 @@
 doc_analysis API route handlers
 """
 import json
-from datetime import datetime
 from typing import Dict, Tuple, List
 
 import fnc
 from faker import Faker
-from flask import jsonify, abort, Blueprint, request
-from jose import jwt
+from flask import jsonify, abort, Blueprint
 from webargs.flaskparser import use_args
 
-from config import SECRET_KET, JWT_ALGO
 from service import db
+from .api_login import auth
 from .schemas import doc_analysis_schema
 
 api = Blueprint('analysis', __name__)
 TEXT_LOCALIZATION = 'ar_AA'
-AUTH_HEADER_KEY = 'Authorization'
 fake: Faker = Faker(TEXT_LOCALIZATION)
 fake_english = Faker()
 
@@ -60,24 +57,10 @@ def _normalize_relations(relations: List[Dict]) -> List[Dict]:
     return list(fnc.map(lambda relation: fnc.omit(['doc_id'], relation), relations))
 
 
-def decode_jwt(token: str):
-    decoded_jwt: Dict = jwt.decode(token, SECRET_KET, JWT_ALGO)
-    return decoded_jwt['username'], decoded_jwt['password'], decoded_jwt['expiration']
-
-
 @api.route('/document/analysis/<doc_id>/')
 @use_args(doc_analysis_schema, location="view_args")
 def doc_analysis(args, **kwargs):
-    if AUTH_HEADER_KEY not in request.headers:
-        abort(401)
-    try:
-        username, password, expiration = decode_jwt(token=request.headers[AUTH_HEADER_KEY].split(' ')[1])
-        token_expiration: datetime = datetime.fromtimestamp(expiration)
-        if token_expiration < datetime.utcnow():
-            abort(401, 'authorization failure, token expired, please try re-login')
-    except Exception as exp:
-        abort(401, 'authorization failure, please try re-login')
-
+    auth()
     doc_id = kwargs['doc_id']
     document = db.select_where_col(table="documents", col="id", value=doc_id, get_first_row=True)
     if document is None:
