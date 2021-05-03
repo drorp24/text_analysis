@@ -10,3 +10,8 @@ feedback_location_request_body = {
     'feedback': fields.Str(required=True, allow_none=True,
                            validate=validate.OneOf([None, 'correct', 'wrong', 'not_sure']))
 }
+
+login_form_data = {
+    'username': fields.Str(required=True),
+    'password': fields.Str(required=True)
+}

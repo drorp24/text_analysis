@@ -34,3 +34,8 @@ def add_error_handlers(app):
             return response, code, headers
         else:
             return response, code
+
+    @app.errorhandler(401)
+    def not_authorized(error):
+        response, headers, code = _format_error(error=error, code=401, general_message='Not authorized')
+        return response, code, headers

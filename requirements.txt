@@ -9,3 +9,5 @@ fnc
 python-dotenv
 pytest
 webargs
+python-json
+python-multipart
