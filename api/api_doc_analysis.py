@@ -71,7 +71,7 @@ def doc_analysis(args, **kwargs):
     if AUTH_HEADER_KEY not in request.headers:
         abort(401)
     try:
-        username, password, expiration = decode_jwt(token=request.headers[AUTH_HEADER_KEY])
+        username, password, expiration = decode_jwt(token=request.headers[AUTH_HEADER_KEY].split(' ')[1])
         token_expiration: datetime = datetime.fromtimestamp(expiration)
         if token_expiration < datetime.utcnow():
             abort(401, 'authorization failure, token expired, please try re-login')
