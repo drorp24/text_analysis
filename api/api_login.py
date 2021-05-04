@@ -46,6 +46,6 @@ def auth():
         username, password, expiration = decode_jwt(token=request.headers[AUTH_HEADER_KEY].split(' ')[1])
         token_expiration: datetime = datetime.fromtimestamp(expiration)
         if token_expiration < datetime.utcnow():
-            abort(401, 'authorization failure, token expired, please try re-login')
+            abort(403, 'authorization failure, token expired, please try re-login')
     except Exception as exp:
         abort(401, 'authorization failure, please try re-login')

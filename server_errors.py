@@ -39,3 +39,8 @@ def add_error_handlers(app):
     def not_authorized(error):
         response, headers, code = _format_error(error=error, code=401, general_message='Not authorized')
         return response, code, headers
+
+    @app.errorhandler(403)
+    def not_authorized(error):
+        response, headers, code = _format_error(error=error, code=403, general_message='token expired')
+        return response, code, headers
