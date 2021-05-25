@@ -11,7 +11,7 @@ DIALECT = 'postgresql'
 USERNAME = 'postgres'
 PASSWORD = '29092012'
 HOST = 'localhost:5432'
-DATABASE = 'ta3'
+DATABASE = 'text_analysis'
 DATA_DIR_PATH = "../data"
 
 # ********* SqlAlchemy INIT ****************
@@ -95,6 +95,8 @@ def populate_tables(tables: List[Table]):
 
 def load_json_file(table_name: str, dir_path=DATA_DIR_PATH) -> Optional[List[Dict]]:
     full_path: str = f'{dir_path}/{table_name}.json'
+    print(full_path)
+    print(os.path.exists(full_path))
     if not os.path.exists(full_path):
         return None
     with open(full_path) as json_file:

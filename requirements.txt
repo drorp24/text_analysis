@@ -9,3 +9,4 @@ fnc
 python-dotenv
 pytest
 webargs
+flask_swagger_ui
